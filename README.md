@@ -4,7 +4,7 @@ By interacting with the page, viewers trigger a flow of swirling shapes and shif
 
 ## 🎨 Concept
 
-The project emphasizes the beauty found in randomness. Through random, ever-shifting visuals and melodies, **PatternsOfRandomness** conveys how repetition and novelty can coexist. The shapes continuously morph, with each session offering a new arrangement while retaining recognizable patterns. Similarly, the procedural music evolves with each loop but maintains recurring motifs, creating a blend of the known and the unexpected.
+The project emphasizes the beauty found in randomness. Through random, ever-shifting visuals and melodies, **PatternsOfRandomness** conveys how repetition and novelty can coexist. The visual continuously evolves, with each session offering a new arrangement while retaining recognizable patterns. Similarly, the procedural music evolves with each loop but maintains recurring motifs, creating a blend of the known and the unexpected.
 
 **Key Features**:
 - **Randomized Visuals**: Constantly moving and changing shapes that exhibit patterns of both familiarity and uniqueness. Shapes vary in size, position, and color with every session.
