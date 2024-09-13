@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Patterns of Randomness</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: black;
+            height: 100%;
+            width: 100%;
+        }
+        canvas {
+            display: block;
+            background: black;
+            width: 100%;
+            height: 100%;
+        }
+        #touch-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 48px;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="visualCanvas"></canvas>
+    <div id="touch-message">Touch Screen to Start</div>
+    <script>
+        const canvas = document.getElementById('visualCanvas');
+        const ctx = canvas.getContext('2d');
+        const touchMessage = document.getElementById('touch-message');  // Reference to the touch message
+
+        let width, height;
+
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Function to get a random number within a range
+        function getRandom(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        let shapes = [];
+
+        function generateRandomShapes() {
+            const shapeCount = Math.floor(getRandom(10, 20));  // Randomize the number of shapes
+
+            shapes = [];
+
+            // Initialize shapes with randomized properties
+            for (let i = 0; i < shapeCount; i++) {
+                shapes.push({
+                    x: getRandom(0, width),
+                    y: getRandom(0, height),
+                    radius: getRandom(30, 100),  // Random radius
+                    xSpeed: getRandom(0.2, 1),  // Random speed
+                    ySpeed: getRandom(0.2, 1),
+                    radiusSpeed: getRandom(0.3, 0.8)  // Random radius change speed
+                });
+            }
+        }
+
+        function updateShapes() {
+            // Move the shapes based on their speeds
+            for (let shape of shapes) {
+                shape.x += shape.xSpeed * (Math.random() > 0.5 ? 1 : -1);
+                shape.y += shape.ySpeed * (Math.random() > 0.5 ? 1 : -1);
+
+                // Make sure they stay within bounds
+                if (shape.x < 0 || shape.x > width) shape.xSpeed *= -1;
+                if (shape.y < 0 || shape.y > height) shape.ySpeed *= -1;
+
+                // Update radius with slight randomness
+                shape.radius += Math.sin(Date.now() * 0.001 * shape.radiusSpeed) * 1.5;
+                if (shape.radius < 30) shape.radius = 30;  // Prevent shrinking too much
+            }
+        }
+
+        function drawPsychedelicVisual() {
+            ctx.clearRect(0, 0, width, height);  // Clear canvas for each frame
+
+            // Loop through shapes and draw them with random properties
+            for (let i = 0; i < shapes.length; i++) {
+                const shape = shapes[i];
+
+                // Psychedelic color distortion with randomness
+                const red = Math.floor(getRandom(0, 255));
+                const green = Math.floor(getRandom(0, 255));
+                const blue = Math.floor(getRandom(0, 255));
+
+                // Create flowing and merging effect by drawing shapes with varying opacity
+                ctx.beginPath();
+                ctx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${getRandom(0.4, 0.8)})`;
+                ctx.fill();
+
+                // Additional random morphing visual
+                ctx.beginPath();
+                ctx.moveTo(width / 2, height / 2);
+                ctx.lineTo(shape.x, shape.y);
+                ctx.strokeStyle = `rgba(${Math.floor(blue)}, ${Math.floor(green)}, ${Math.floor(red)}, ${getRandom(0.3, 0.7)})`;
+                ctx.lineWidth = getRandom(1, 10);
+                ctx.stroke();
+            }
+        }
+
+        // Web Audio API for background melody
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+
+        const noteFrequencies = {
+            'A2': 110.00,
+            'B2': 123.47,
+            'C3': 130.81,
+            'D3': 146.83,
+            'E3': 164.81,
+            'F3': 174.61,
+            'G3': 196.00,
+            'A3': 220.00,
+            'B3': 246.94,
+            'C4': 261.63,
+            'D4': 293.66,
+            'E4': 329.63,
+            'F4': 349.23,
+            'G4': 392.00
+        };
+
+        const tempo = 100;  // Tempo in beats per minute
+
+        function catchyMelody() {
+            const melody = [];
+            const notes = Object.keys(noteFrequencies);  // Random notes from available frequencies
+            const durationChoices = [0.25, 0.5, 0.75, 1];  // Random durations
+
+            for (let i = 0; i < 16; i++) {
+                const note = notes[Math.floor(Math.random() * notes.length)];  // Random note
+                const duration = durationChoices[Math.floor(Math.random() * durationChoices.length)];  // Random duration
+                melody.push({ note, duration });
+            }
+            return melody;
+        }
+
+        function playMelody() {
+            const melody = catchyMelody();  // Generate a new random melody every time
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const now = audioCtx.currentTime;
+            let noteTime = now;
+
+            // Loop through the melody and play each note
+            for (let i = 0; i < melody.length; i++) {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';  // Smooth sine wave for a harmonious feel
+
+                const note = melody[i].note;
+                const duration = melody[i].duration * (60 / tempo);
+
+                // Set oscillator frequency for the note
+                oscillator.frequency.value = noteFrequencies[note];
+                gainNode.gain.setValueAtTime(0.2, noteTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, noteTime + duration);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start(noteTime);
+                oscillator.stop(noteTime + duration);
+
+                // Update visuals in sync with the melody
+                setTimeout(() => {
+                    updateShapes();  // Move shapes
+                    drawPsychedelicVisual();  // Update shapes and colors for each note
+                }, (noteTime - now) * 1000);  // Sync with the note timing
+
+                noteTime += duration;
+            }
+
+            // Instead of stopping, loop continuously by scheduling the next notes while the current loop plays
+            setTimeout(() => {
+                playMelody();  // Play next random melody while the current one continues
+            }, melody.length * (60 / tempo) * 1000 - 100);  // Start next melody before the current one ends
+        }
+
+        // Unlock audio context on user interaction and hide "Touch Screen" message
+        function unlockAudioContext() {
+            if (audioCtx.state === 'suspended') {
+                const events = ['click', 'keydown', 'touchstart'];
+                const unlock = () => {
+                    touchMessage.style.opacity = '0';  // Fade out the "Touch Screen" message
+                    setTimeout(() => {
+                        touchMessage.style.display = 'none';  // Remove the message once it fades out
+                    }, 1000);
+                    generateRandomShapes();  // Generate initial random shapes
+                    playMelody();  // Start melody and visual sync immediately
+                    audioCtx.resume().then(() => {
+                        events.forEach(event => document.body.removeEventListener(event, unlock));
+                    });
+                };
+                events.forEach(event => document.body.addEventListener(event, unlock, false));
+            } else {
+                touchMessage.style.opacity = '0';  // Fade out the "Touch Screen" message
+                setTimeout(() => {
+                    touchMessage.style.display = 'none';  // Remove the message once it fades out
+                }, 1000);
+                generateRandomShapes();
+                playMelody();  // Start melody and visuals immediately
+            }
+        }
+
+        unlockAudioContext();
+    </script>
+</body>
+</html>
