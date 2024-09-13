@@ -165,6 +165,9 @@
             const now = audioCtx.currentTime;
             let noteTime = now;
 
+            // Regenerate random shapes for each loop
+            generateRandomShapes();
+
             // Loop through the melody and play each note
             for (let i = 0; i < melody.length; i++) {
                 const oscillator = audioCtx.createOscillator();
@@ -197,7 +200,7 @@
 
             // Instead of stopping, loop continuously by scheduling the next notes while the current loop plays
             setTimeout(() => {
-                playMelody();  // Play next random melody while the current one continues
+                playMelody();  // Play next random melody and regenerate visuals
             }, melody.length * (60 / tempo) * 1000 - 100);  // Start next melody before the current one ends
         }
 
