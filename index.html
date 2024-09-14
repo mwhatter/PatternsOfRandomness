@@ -38,7 +38,7 @@
     <script>
         const canvas = document.getElementById('visualCanvas');
         const ctx = canvas.getContext('2d');
-        const touchMessage = document.getElementById('touch-message');  // Reference to the touch message
+        const touchMessage = document.getElementById('touch-message');
 
         let width, height;
 
@@ -50,73 +50,109 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Function to get a random number within a range
         function getRandom(min, max) {
             return Math.random() * (max - min) + min;
         }
 
         let shapes = [];
+        let linesFlashIntensity = 0;
+        let maxShapes = 100;
 
         function generateRandomShapes() {
-            const shapeCount = Math.floor(getRandom(10, 20));  // Randomize the number of shapes
+            const shapeCount = Math.floor(getRandom(5, 10));
 
-            shapes = [];
-
-            // Initialize shapes with randomized properties
             for (let i = 0; i < shapeCount; i++) {
                 shapes.push({
                     x: getRandom(0, width),
                     y: getRandom(0, height),
-                    radius: getRandom(30, 100),  // Random radius
-                    xSpeed: getRandom(0.2, 1),  // Random speed
-                    ySpeed: getRandom(0.2, 1),
-                    radiusSpeed: getRandom(0.3, 0.8)  // Random radius change speed
+                    radius: getRandom(30, 100),
+                    xSpeed: getRandom(-0.5, 0.5),
+                    ySpeed: getRandom(-0.5, 0.5),
+                    radiusSpeed: getRandom(0.1, 0.3),
+                    color: {
+                        red: Math.floor(getRandom(100, 255)),
+                        green: Math.floor(getRandom(100, 255)),
+                        blue: Math.floor(getRandom(100, 255)),
+                        alpha: getRandom(0.5, 1)
+                    },
+                    colorChangeSpeed: getRandom(0.2, 0.5),
+                    life: 0,
+                    maxLife: getRandom(600, 1000)
                 });
+            }
+
+            if (shapes.length > maxShapes) {
+                shapes.splice(0, shapes.length - maxShapes);
             }
         }
 
         function updateShapes() {
-            // Move the shapes based on their speeds
-            for (let shape of shapes) {
-                shape.x += shape.xSpeed * (Math.random() > 0.5 ? 1 : -1);
-                shape.y += shape.ySpeed * (Math.random() > 0.5 ? 1 : -1);
+            for (let i = shapes.length - 1; i >= 0; i--) {
+                let shape = shapes[i];
+                shape.x += shape.xSpeed;
+                shape.y += shape.ySpeed;
 
-                // Make sure they stay within bounds
                 if (shape.x < 0 || shape.x > width) shape.xSpeed *= -1;
                 if (shape.y < 0 || shape.y > height) shape.ySpeed *= -1;
 
-                // Update radius with slight randomness
-                shape.radius += Math.sin(Date.now() * 0.001 * shape.radiusSpeed) * 1.5;
-                if (shape.radius < 30) shape.radius = 30;  // Prevent shrinking too much
+                shape.radius += Math.sin(Date.now() * 0.001 * shape.radiusSpeed);
+                if (shape.radius < 20) shape.radius = 20;
+
+                shape.color.red = (shape.color.red + shape.colorChangeSpeed) % 255;
+                shape.color.green = (shape.color.green + shape.colorChangeSpeed) % 255;
+                shape.color.blue = (shape.color.blue + shape.colorChangeSpeed) % 255;
+
+                shape.life += 1;
+                if (shape.life > shape.maxLife && shapes.length > 20) {
+                    shapes.splice(i, 1);
+                }
             }
         }
 
-        function drawPsychedelicVisual() {
-            ctx.clearRect(0, 0, width, height);  // Clear canvas for each frame
+        // *** Added scheduledNotes array ***
+        let scheduledNotes = [];
 
-            // Loop through shapes and draw them with random properties
+        function drawPsychedelicVisual() {
+            // *** Check for scheduled note times to trigger flashLines() ***
+            if (scheduledNotes.length > 0 && audioCtx.currentTime >= scheduledNotes[0] - 0.01) {
+                flashLines();
+                scheduledNotes.shift();
+            }
+
+            ctx.clearRect(0, 0, width, height);
+
             for (let i = 0; i < shapes.length; i++) {
                 const shape = shapes[i];
 
-                // Psychedelic color distortion with randomness
-                const red = Math.floor(getRandom(0, 255));
-                const green = Math.floor(getRandom(0, 255));
-                const blue = Math.floor(getRandom(0, 255));
+                const red = Math.floor(shape.color.red);
+                const green = Math.floor(shape.color.green);
+                const blue = Math.floor(shape.color.blue);
+                const alpha = shape.color.alpha;
 
-                // Create flowing and merging effect by drawing shapes with varying opacity
                 ctx.beginPath();
                 ctx.arc(shape.x, shape.y, shape.radius, 0, 2 * Math.PI);
-                ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${getRandom(0.4, 0.8)})`;
+                ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${alpha})`;
                 ctx.fill();
 
-                // Additional random morphing visual
                 ctx.beginPath();
                 ctx.moveTo(width / 2, height / 2);
                 ctx.lineTo(shape.x, shape.y);
-                ctx.strokeStyle = `rgba(${Math.floor(blue)}, ${Math.floor(green)}, ${Math.floor(red)}, ${getRandom(0.3, 0.7)})`;
-                ctx.lineWidth = getRandom(1, 10);
+
+                let lineAlpha = (alpha * 0.8) * linesFlashIntensity;
+                if (lineAlpha > 1) lineAlpha = 1;
+
+                ctx.strokeStyle = `rgba(${255 - red}, ${255 - green}, ${255 - blue}, ${lineAlpha})`;
+                ctx.lineWidth = 2 + linesFlashIntensity * 5;
                 ctx.stroke();
             }
+
+            if (linesFlashIntensity > 0) {
+                linesFlashIntensity -= 0.03;
+                if (linesFlashIntensity < 0) linesFlashIntensity = 0;
+            }
+
+            updateShapes();
+            requestAnimationFrame(drawPsychedelicVisual);
         }
 
         // Web Audio API for background melody
@@ -124,39 +160,29 @@
         const audioCtx = new AudioContext();
 
         const noteFrequencies = {
-            'A2': 110.00,
-            'B2': 123.47,
-            'C3': 130.81,
-            'D3': 146.83,
-            'E3': 164.81,
-            'F3': 174.61,
-            'G3': 196.00,
-            'A3': 220.00,
-            'B3': 246.94,
-            'C4': 261.63,
-            'D4': 293.66,
-            'E4': 329.63,
-            'F4': 349.23,
-            'G4': 392.00
+            'A2': 110.00, 'B2': 123.47, 'C3': 130.81, 'D3': 146.83, 'E3': 164.81,
+            'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'B3': 246.94, 'C4': 261.63,
+            'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00,
+            'B4': 493.88, 'C5': 523.25
         };
 
-        const tempo = 100;  // Tempo in beats per minute
+        const tempo = 60;
 
         function catchyMelody() {
             const melody = [];
-            const notes = Object.keys(noteFrequencies);  // Random notes from available frequencies
-            const durationChoices = [0.25, 0.5, 0.75, 1];  // Random durations
+            const notes = Object.keys(noteFrequencies);
+            const durationChoices = [0.5, 1, 1.5, 2];
 
-            for (let i = 0; i < 16; i++) {
-                const note = notes[Math.floor(Math.random() * notes.length)];  // Random note
-                const duration = durationChoices[Math.floor(Math.random() * durationChoices.length)];  // Random duration
+            for (let i = 0; i < 32; i++) {
+                const note = notes[Math.floor(Math.random() * notes.length)];
+                const duration = durationChoices[Math.floor(Math.random() * durationChoices.length)];
                 melody.push({ note, duration });
             }
             return melody;
         }
 
         function playMelody() {
-            const melody = catchyMelody();  // Generate a new random melody every time
+            const melody = catchyMelody();
 
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
@@ -165,20 +191,21 @@
             const now = audioCtx.currentTime;
             let noteTime = now;
 
-            // Regenerate random shapes for each loop
             generateRandomShapes();
 
-            // Loop through the melody and play each note
+            scheduledNotes = [];  // Reset the scheduled notes array
+
+            let totalDuration = 0;
+
             for (let i = 0; i < melody.length; i++) {
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
 
-                oscillator.type = 'sine';  // Smooth sine wave for a harmonious feel
+                oscillator.type = 'sine';
 
                 const note = melody[i].note;
                 const duration = melody[i].duration * (60 / tempo);
 
-                // Set oscillator frequency for the note
                 oscillator.frequency.value = noteFrequencies[note];
                 gainNode.gain.setValueAtTime(0.2, noteTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.0001, noteTime + duration);
@@ -189,48 +216,114 @@
                 oscillator.start(noteTime);
                 oscillator.stop(noteTime + duration);
 
-                // Update visuals in sync with the melody
-                setTimeout(() => {
-                    updateShapes();  // Move shapes
-                    drawPsychedelicVisual();  // Update shapes and colors for each note
-                }, (noteTime - now) * 1000);  // Sync with the note timing
+                // *** Store the note time for synchronization ***
+                scheduledNotes.push(noteTime);
 
                 noteTime += duration;
+                totalDuration += duration;
             }
 
-            // Instead of stopping, loop continuously by scheduling the next notes while the current loop plays
+            // Schedule the next melody loop slightly before the current one ends
             setTimeout(() => {
-                playMelody();  // Play next random melody and regenerate visuals
-            }, melody.length * (60 / tempo) * 1000 - 100);  // Start next melody before the current one ends
+                playMelody();
+            }, totalDuration * 1000 - 100);
         }
 
-        // Unlock audio context on user interaction and hide "Touch Screen" message
+        function flashLines() {
+            linesFlashIntensity = 1.0;
+        }
+
         function unlockAudioContext() {
             if (audioCtx.state === 'suspended') {
                 const events = ['click', 'keydown', 'touchstart'];
                 const unlock = () => {
-                    touchMessage.style.opacity = '0';  // Fade out the "Touch Screen" message
+                    touchMessage.style.opacity = '0';
                     setTimeout(() => {
-                        touchMessage.style.display = 'none';  // Remove the message once it fades out
+                        touchMessage.style.display = 'none';
                     }, 1000);
-                    generateRandomShapes();  // Generate initial random shapes
-                    playMelody();  // Start melody and visual sync immediately
+                    generateRandomShapes();
+                    drawPsychedelicVisual();
+                    playMelody();
                     audioCtx.resume().then(() => {
                         events.forEach(event => document.body.removeEventListener(event, unlock));
                     });
                 };
                 events.forEach(event => document.body.addEventListener(event, unlock, false));
             } else {
-                touchMessage.style.opacity = '0';  // Fade out the "Touch Screen" message
+                touchMessage.style.opacity = '0';
                 setTimeout(() => {
-                    touchMessage.style.display = 'none';  // Remove the message once it fades out
+                    touchMessage.style.display = 'none';
                 }, 1000);
                 generateRandomShapes();
-                playMelody();  // Start melody and visuals immediately
+                drawPsychedelicVisual();
+                playMelody();
             }
         }
 
         unlockAudioContext();
+
+        function handleInteraction(event) {
+            event.preventDefault();
+
+            let x, y;
+            if (event.type === 'touchstart') {
+                x = event.touches[0].clientX;
+                y = event.touches[0].clientY;
+            } else {
+                x = event.clientX;
+                y = event.clientY;
+            }
+
+            const newShape = {
+                x: x,
+                y: y,
+                radius: getRandom(30, 100),
+                xSpeed: getRandom(-0.5, 0.5),
+                ySpeed: getRandom(-0.5, 0.5),
+                radiusSpeed: getRandom(0.1, 0.3),
+                color: {
+                    red: Math.floor(getRandom(100, 255)),
+                    green: Math.floor(getRandom(100, 255)),
+                    blue: Math.floor(getRandom(100, 255)),
+                    alpha: getRandom(0.5, 1)
+                },
+                colorChangeSpeed: getRandom(0.2, 0.5),
+                life: 0,
+                maxLife: getRandom(600, 1000)
+            };
+            shapes.push(newShape);
+
+            playToneAtPosition(x, y);
+        }
+
+        function playToneAtPosition(x, y) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'sine';
+
+            const minFreq = 200;
+            const maxFreq = 1000;
+            const frequency = minFreq + ((x / width) * (maxFreq - minFreq));
+            oscillator.frequency.value = frequency;
+
+            const maxGain = 0.5;
+            const minGain = 0.1;
+            const gainValue = minGain + ((height - y) / height) * (maxGain - minGain);
+            gainNode.gain.setValueAtTime(gainValue, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 1);
+
+            linesFlashIntensity = 1.0;
+        }
+
+        canvas.addEventListener('click', handleInteraction);
+        canvas.addEventListener('touchstart', handleInteraction);
     </script>
 </body>
 </html>
